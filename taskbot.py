@@ -9,8 +9,8 @@ import sqlalchemy
 
 import db
 from db import Task
-
-TOKEN = ""
+#after take out the token to other file
+TOKEN = "516610106:AAHJx-qxbT33MUBgiWkY6rchvHaE6amQhdg"
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
