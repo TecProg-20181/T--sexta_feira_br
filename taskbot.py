@@ -40,6 +40,8 @@ HELP = """
  /help
 """
 
+# put into a classe api
+
 
 def get_url(url):
     response = requests.get(url)
@@ -106,6 +108,14 @@ def deps_text(task, chat, preceed=''):
     return text
 
 
+def new(chat, msg):
+    task = Task(chat=chat, name=msg, status='TODO',
+                dependencies='', parents='', priority='')
+    db.session.add(task)
+    db.session.commit()
+    send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
+
+
 def handle_updates(updates):
     for update in updates["result"]:
         if 'message' in update:
@@ -126,13 +136,7 @@ def handle_updates(updates):
         print(command, msg, chat)
 
         if command == '/new':
-            task = Task(chat=chat, name=msg, status='TODO',
-                        dependencies='', parents='', priority='')
-            db.session.add(task)
-            db.session.commit()
-            send_message(
-                "New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
-
+            new(chat, msg)
         elif command == '/rename':
             text = ''
             if msg != '':
