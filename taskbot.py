@@ -116,6 +116,35 @@ def new(chat, msg):
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
 
+def rename(msg,chat):
+    text = ''
+    if msg != '':
+        if len(msg.split(' ', 1)) > 1:
+            text = msg.split(' ', 1)[1]
+        msg = msg.split(' ', 1)[0]
+
+        if not msg.isdigit():
+            send_message("You must inform the task id", chat)
+        else:
+            task_id = int(msg)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        if text == '':
+            send_message(
+                    "You want to modify task {}, but you didn't provide any new text".format(task_id), chat)
+            return
+
+        old_text = task.name
+        task.name = text
+        db.session.commit()
+        send_message("Task {} redefined from {} to {}".format(
+    task_id, old_text, text), chat)
+
 def handle_updates(updates):
     for update in updates["result"]:
         if 'message' in update:
@@ -138,34 +167,7 @@ def handle_updates(updates):
         if command == '/new':
             new(chat, msg)
         elif command == '/rename':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
-
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message(
-                        "_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-
-                if text == '':
-                    send_message(
-                        "You want to modify task {}, but you didn't provide any new text".format(task_id), chat)
-                    return
-
-                old_text = task.name
-                task.name = text
-                db.session.commit()
-                send_message("Task {} redefined from {} to {}".format(
-                    task_id, old_text, text), chat)
+            rename(msg,chat)
         elif command == '/duplicate':
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
