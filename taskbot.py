@@ -187,6 +187,20 @@ def delete(msg,chat):
         db.session.delete(task)
         db.session.commit()
         send_message("Task [[{}]] deleted".format(task_id), chat)
+def todo(msg,chat):
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+        task.status = 'TODO'
+        db.session.commit()
+        send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
 
 def handle_updates(updates):
     for update in updates["result"]:
@@ -217,21 +231,7 @@ def handle_updates(updates):
             delete(msg,chat)
 
         elif command == '/todo':
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message(
-                        "_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-                task.status = 'TODO'
-                db.session.commit()
-                send_message(
-                    "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+            todo(msg,chat)
 
         elif command == '/doing':
             if not msg.isdigit():
