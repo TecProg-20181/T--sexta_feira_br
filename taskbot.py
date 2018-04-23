@@ -169,6 +169,25 @@ def duplicate(msg,chat):
         db.session.commit()
         send_message("New task *TODO* [[{}]] {}".format(dtask.id, dtask.name), chat)
 
+def delete(msg,chat):
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+        for t in task.dependencies.split(',')[:-1]:
+            qy = db.session.query(Task).filter_by(id=int(t), chat=chat)
+            t = qy.one()
+            t.parents = t.parents.replace('{},'.format(task.id), '')
+        db.session.delete(task)
+        db.session.commit()
+        send_message("Task [[{}]] deleted".format(task_id), chat)
+
 def handle_updates(updates):
     for update in updates["result"]:
         if 'message' in update:
@@ -195,24 +214,7 @@ def handle_updates(updates):
         elif command == '/duplicate':
             duplicate(msg,chat)
         elif command == '/delete':
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message(
-                        "_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-                for t in task.dependencies.split(',')[:-1]:
-                    qy = db.session.query(Task).filter_by(id=int(t), chat=chat)
-                    t = qy.one()
-                    t.parents = t.parents.replace('{},'.format(task.id), '')
-                db.session.delete(task)
-                db.session.commit()
-                send_message("Task [[{}]] deleted".format(task_id), chat)
+            delete(msg,chat)
 
         elif command == '/todo':
             if not msg.isdigit():
