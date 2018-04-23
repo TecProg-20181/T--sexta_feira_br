@@ -116,7 +116,7 @@ def new(chat, msg):
     send_message("New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
 
-def rename(msg,chat):
+def rename(msg, chat):
     text = ''
     if msg != '':
         if len(msg.split(' ', 1)) > 1:
@@ -136,16 +136,17 @@ def rename(msg,chat):
 
         if text == '':
             send_message(
-                    "You want to modify task {}, but you didn't provide any new text".format(task_id), chat)
+                "You want to modify task {}, but you didn't provide any new text".format(task_id), chat)
             return
 
         old_text = task.name
         task.name = text
         db.session.commit()
         send_message("Task {} redefined from {} to {}".format(
-    task_id, old_text, text), chat)
+            task_id, old_text, text), chat)
 
-def duplicate(msg,chat):
+
+def duplicate(msg, chat):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
     else:
@@ -158,7 +159,7 @@ def duplicate(msg,chat):
             return
 
         dtask = Task(chat=task.chat, name=task.name, status=task.status, dependencies=task.dependencies,
-                             parents=task.parents, priority=task.priority, duedate=task.duedate)
+                     parents=task.parents, priority=task.priority, duedate=task.duedate)
         db.session.add(dtask)
 
         for t in task.dependencies.split(',')[:-1]:
@@ -167,9 +168,11 @@ def duplicate(msg,chat):
             t.parents += '{},'.format(dtask.id)
 
         db.session.commit()
-        send_message("New task *TODO* [[{}]] {}".format(dtask.id, dtask.name), chat)
+        send_message(
+            "New task *TODO* [[{}]] {}".format(dtask.id, dtask.name), chat)
 
-def delete(msg,chat):
+
+def delete(msg, chat):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
     else:
@@ -187,7 +190,9 @@ def delete(msg,chat):
         db.session.delete(task)
         db.session.commit()
         send_message("Task [[{}]] deleted".format(task_id), chat)
-def todo(msg,chat):
+
+
+def todo(msg, chat):
     if not msg.isdigit():
         send_message("You must inform the task id", chat)
     else:
@@ -201,6 +206,23 @@ def todo(msg,chat):
         task.status = 'TODO'
         db.session.commit()
         send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+
+
+def doing(msg, chat):
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+        task.status = 'DOING'
+        db.session.commit()
+        send_message("*DOING* task [[{}]] {}".format(task.id, task.name), chat)
+
 
 def handle_updates(updates):
     for update in updates["result"]:
@@ -224,32 +246,17 @@ def handle_updates(updates):
         if command == '/new':
             new(chat, msg)
         elif command == '/rename':
-            rename(msg,chat)
+            rename(msg, chat)
         elif command == '/duplicate':
-            duplicate(msg,chat)
+            duplicate(msg, chat)
         elif command == '/delete':
-            delete(msg,chat)
+            delete(msg, chat)
 
         elif command == '/todo':
-            todo(msg,chat)
+            todo(msg, chat)
 
         elif command == '/doing':
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message(
-                        "_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-                task.status = 'DOING'
-                db.session.commit()
-                send_message(
-                    "*DOING* task [[{}]] {}".format(task.id, task.name), chat)
-
+            doing(msg, chat)
         elif command == '/done':
             if not msg.isdigit():
                 send_message("You must inform the task id", chat)
