@@ -261,24 +261,108 @@ def list_tasks(chat):
     a += '\U0001F4DD _Status_\n'
     query = db.session.query(Task).filter_by(
         status='TODO', chat=chat).order_by(Task.id)
-    
+
     a += '\n\U0001F195 *TODO*\n'
     for task in query.all():
         a += '[[{}]] {}\n'.format(task.id, task.name)
     query = db.session.query(Task).filter_by(
         status='DOING', chat=chat).order_by(Task.id)
-    
+
     a += '\n\U000023FA *DOING*\n'
     for task in query.all():
         a += '[[{}]] {}\n'.format(task.id, task.name)
     query = db.session.query(Task).filter_by(
-            status='DONE', chat=chat).order_by(Task.id)
-    
+        status='DONE', chat=chat).order_by(Task.id)
+
     a += '\n\U00002611 *DONE*\n'
     for task in query.all():
         a += '[[{}]] {}\n'.format(task.id, task.name)
 
     send_message(a, chat)
+
+def dependson(msg,chat):
+    text = ''
+    if msg != '':
+        if len(msg.split(' ', 1)) > 1:
+            text = msg.split(' ', 1)[1]
+        msg = msg.split(' ', 1)[0]
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message(
+            "_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        if text == '':
+            for i in task.dependencies.split(',')[:-1]:
+                i = int(i)
+                q = db.session.query(Task).filter_by(id=i, chat=chat)
+                t = q.one()
+                t.parents = t.parents.replace(
+                    '{},'.format(task.id), '')
+
+            task.dependencies = ''
+            send_message(
+                "Dependencies removed from task {}".format(task_id), chat)
+        else:
+            for depid in text.split(' '):
+                if not depid.isdigit():
+                    send_message(
+                                "All dependencies ids must be numeric, and not {}".format(depid), chat)
+                else:
+                    depid = int(depid)
+                    query = db.session.query(
+                        Task).filter_by(id=depid, chat=chat)
+                try:
+                    taskdep = query.one()
+                    taskdep.parents += str(task.id) + ','
+                except sqlalchemy.orm.exc.NoResultFound:
+                    send_message(
+                        "_404_ Task {} not found x.x".format(depid), chat)
+                    continue
+
+                deplist = task.dependencies.split(',')
+                if str(depid) not in deplist:
+                    task.dependencies += str(depid) + ','
+        db.session.commit()
+        send_message(
+            "Task {} dependencies up to date".format(task_id), chat)
+
+def priority(msg,chat):
+    text = ''
+    if msg != '':
+        if len(msg.split(' ', 1)) > 1:
+            text = msg.split(' ', 1)[1]
+        msg = msg.split(' ', 1)[0]
+
+    if not msg.isdigit():
+        send_message("You must inform the task id", chat)
+    else:
+        task_id = int(msg)
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        try:
+            task = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            send_message("_404_ Task {} not found x.x".format(task_id), chat)
+            return
+
+        if text == '':
+            task.priority = ''
+            send_message("_Cleared_ all priorities from task {}".format(task_id), chat)
+        else:
+            if text.lower() not in ['high', 'medium', 'low']:
+                send_message("The priority *must be* one of the following: high, medium, low", chat)
+            else:
+                task.priority = text.lower()
+                send_message("*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
+        db.session.commit()
+
 
 
 def handle_updates(updates):
@@ -318,95 +402,12 @@ def handle_updates(updates):
             done(msg, chat)
 
         elif command == '/list':
-            list_tasks(chat)  
+            list_tasks(chat)
 
         elif command == '/dependson':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
-
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message(
-                        "_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-
-                if text == '':
-                    for i in task.dependencies.split(',')[:-1]:
-                        i = int(i)
-                        q = db.session.query(Task).filter_by(id=i, chat=chat)
-                        t = q.one()
-                        t.parents = t.parents.replace(
-                            '{},'.format(task.id), '')
-
-                    task.dependencies = ''
-                    send_message(
-                        "Dependencies removed from task {}".format(task_id), chat)
-                else:
-                    for depid in text.split(' '):
-                        if not depid.isdigit():
-                            send_message(
-                                "All dependencies ids must be numeric, and not {}".format(depid), chat)
-                        else:
-                            depid = int(depid)
-                            query = db.session.query(
-                                Task).filter_by(id=depid, chat=chat)
-                            try:
-                                taskdep = query.one()
-                                taskdep.parents += str(task.id) + ','
-                            except sqlalchemy.orm.exc.NoResultFound:
-                                send_message(
-                                    "_404_ Task {} not found x.x".format(depid), chat)
-                                continue
-
-                            deplist = task.dependencies.split(',')
-                            if str(depid) not in deplist:
-                                task.dependencies += str(depid) + ','
-
-                db.session.commit()
-                send_message(
-                    "Task {} dependencies up to date".format(task_id), chat)
+            dependson(msg,chat)
         elif command == '/priority':
-            text = ''
-            if msg != '':
-                if len(msg.split(' ', 1)) > 1:
-                    text = msg.split(' ', 1)[1]
-                msg = msg.split(' ', 1)[0]
-
-            if not msg.isdigit():
-                send_message("You must inform the task id", chat)
-            else:
-                task_id = int(msg)
-                query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-                try:
-                    task = query.one()
-                except sqlalchemy.orm.exc.NoResultFound:
-                    send_message(
-                        "_404_ Task {} not found x.x".format(task_id), chat)
-                    return
-
-                if text == '':
-                    task.priority = ''
-                    send_message(
-                        "_Cleared_ all priorities from task {}".format(task_id), chat)
-                else:
-                    if text.lower() not in ['high', 'medium', 'low']:
-                        send_message(
-                            "The priority *must be* one of the following: high, medium, low", chat)
-                    else:
-                        task.priority = text.lower()
-                        send_message(
-                            "*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
-                db.session.commit()
-
+            priority(msg,chat)
         elif command == '/start':
             send_message("Welcome! Here is a list of things you can do.", chat)
             send_message(HELP, chat)
