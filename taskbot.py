@@ -239,7 +239,7 @@ def done(msg, chat):
         db.session.commit()
         send_message("*DONE* task [[{}]] {}".format(task.id, task.name), chat)
 
-'''
+
 def list_tasks(chat):
     a = ''
     a += '\U0001F4CB Task List\n'
@@ -279,7 +279,7 @@ def list_tasks(chat):
         a += '[[{}]] {}\n'.format(task.id, task.name)
 
     send_message(a, chat)
-'''
+
 
 def handle_updates(updates):
     for update in updates["result"]:
@@ -318,42 +318,8 @@ def handle_updates(updates):
             done(msg, chat)
 
         elif command == '/list':
-            a = ''
+            list_tasks(chat)  
 
-            a += '\U0001F4CB Task List\n'
-            query = db.session.query(Task).filter_by(
-                parents='', chat=chat).order_by(Task.id)
-            for task in query.all():
-                icon = '\U0001F195'
-                if task.status == 'DOING':
-                    icon = '\U000023FA'
-                elif task.status == 'DONE':
-                    icon = '\U00002611'
-
-                a += '[[{}]] {} {}\n'.format(task.id, icon, task.name)
-                a += deps_text(task, chat)
-
-            send_message(a, chat)
-            a = ''
-
-            a += '\U0001F4DD _Status_\n'
-            query = db.session.query(Task).filter_by(
-                status='TODO', chat=chat).order_by(Task.id)
-            a += '\n\U0001F195 *TODO*\n'
-            for task in query.all():
-                a += '[[{}]] {}\n'.format(task.id, task.name)
-            query = db.session.query(Task).filter_by(
-                status='DOING', chat=chat).order_by(Task.id)
-            a += '\n\U000023FA *DOING*\n'
-            for task in query.all():
-                a += '[[{}]] {}\n'.format(task.id, task.name)
-            query = db.session.query(Task).filter_by(
-                status='DONE', chat=chat).order_by(Task.id)
-            a += '\n\U00002611 *DONE*\n'
-            for task in query.all():
-                a += '[[{}]] {}\n'.format(task.id, task.name)
-
-            send_message(a, chat)            
         elif command == '/dependson':
             text = ''
             if msg != '':
