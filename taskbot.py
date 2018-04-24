@@ -10,20 +10,18 @@ import sqlalchemy
 import db
 from db import Task
 
-# after take out the token to other file
+# take out the token to other file
+FILENAME = "TOKEN.txt"
 
-
-def read_file_token():
-    WORDLIST_FILENAME = "TOKEN.txt"
+def read_file_token(FILENAME):
     print("Loading Token")
-    inFile = open(WORDLIST_FILENAME, 'r')
-    line = inFile.readline()
-    return line
+    inFile = open(FILENAME, 'r')
+    TOKEN = inFile.readline().rstrip()
+    return TOKEN
 
+TOKEN = read_file_token(FILENAME)
 
-TOKEN = read_file_token()
-
-
+# after take out the token to other file
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
@@ -109,7 +107,7 @@ def deps_text(task, chat, preceed=''):
 
 
 class Tags(object):
-    
+
     def new(self,msg,chat):
         task = Task(chat=chat, name=msg, status='TODO',
                     dependencies='', parents='', priority='')
