@@ -187,25 +187,22 @@ class Tags(object):
         if not message.isdigit():
             self.idErrorMessage(message, chat)
 
-    def delete(self,msg, chat):
-        if not msg.isdigit():
-            send_message("You must inform the task id", chat)
+    def delete(self, message, chat):
+        if not message.isdigit():
+            self.idErrorMessage(message, chat)
         else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+            taskId = int(message)
             try:
-                task = query.one()
+                task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
+                self.idErrorMessage(message, chat)
                 return
-            for t in task.dependencies.split(',')[:-1]:
-                qy = db.session.query(Task).filter_by(id=int(t), chat=chat)
-                t = qy.one()
-                t.parents = t.parents.replace('{},'.format(task.id), '')
+            for dependentTaskId in task.dependencies.split(',')[:-1]:
+                dependentTask = self.findTask(dependentTaskId, chat)
+                dependentTask.parents = dependentTask.parents.replace('{},'.format(task.id), '')
             db.session.delete(task)
             db.session.commit()
-            send_message("Task [[{}]] deleted".format(task_id), chat)
+            send_message("Task [[{}]] deleted".format(taskId), chat)
 
     def todo(self,msg, chat):
         if not msg.isdigit():
