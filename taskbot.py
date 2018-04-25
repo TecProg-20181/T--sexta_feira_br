@@ -215,25 +215,23 @@ class Tags(object):
             task.status = 'TODO'
             db.session.commit()
             send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
-        if not message.isdigit():
+        elif not message.isdigit():
             self.idErrorMessage(message, chat)
 
-    def doing(self,msg, chat):
-        if not msg.isdigit():
-            send_message("You must inform the task id", chat)
-        else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+    def doing(self, message, chat):
+        if message.isdigit():
+            taskId = int(message)
             try:
-                task = query.one()
+                task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
+                self.idErrorMessage(message, chat)
                 return
             task.status = 'DOING'
             db.session.commit()
             send_message(
                 "*DOING* task [[{}]] {}".format(task.id, task.name), chat)
+        elif not message.isdigit():
+            self.idErrorMessage(message, chat)
 
     def done(self,msg, chat):
         if not msg.isdigit():
