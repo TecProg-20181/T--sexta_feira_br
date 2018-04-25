@@ -122,6 +122,13 @@ class Tags(object):
 
         return task
 
+    def idErrorMessage(self, message, chat):
+        if message.isdigit():
+            send_message("Task {} not found".format(message), chat)
+        else:
+            send_message("You must inform the task id", chat)
+
+
     def rename(self, message, chat):
             newName = ''
             messageIsNotBlank = message != ''
@@ -135,7 +142,7 @@ class Tags(object):
                 try:
                     task = self.findTask(taskId, chat)
                 except sqlalchemy.orm.exc.NoResultFound:
-                    send_message("Task {} not found".format(taskId), chat)
+                    self.idErrorMessage(message, chat)
                     return
 
                 newNameIsBlank = newName == ''
@@ -148,7 +155,7 @@ class Tags(object):
                 db.session.commit()
                 send_message("Task {} redefined from {} to {}".format(taskId, oldName, newName), chat)
             elif not message.isdigit():
-                send_message("You must inform the task id", chat)
+                self.idErrorMessage(message, chat)
 
     def duplicate(self, message, chat):
         if message.isdigit():
@@ -156,9 +163,9 @@ class Tags(object):
             try:
                 task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                send_message("Task {} not found".format(taskId), chat)
+                self.idErrorMessage(message, chat)
                 return
-                
+
             duplicatedTask = Task(chat=task.chat,
                                   name=task.name,
                                   status=task.status,
@@ -178,7 +185,7 @@ class Tags(object):
                                                    duplicatedTask.name),
                                                    chat)
         if not message.isdigit():
-            send_message("You must inform the task id", chat)
+            self.idErrorMessage(message, chat)
 
     def delete(self,msg, chat):
         if not msg.isdigit():
