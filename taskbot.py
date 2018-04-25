@@ -116,6 +116,12 @@ class Tags(object):
         send_message(
             "New task *TODO* [[{}]] {}".format(task.id, task.name),chat)
 
+    def findTask(self, taskId, chat):
+        query = db.session.query(Task).filter_by(id=taskId, chat=chat)
+        task = query.one()
+
+        return task
+
     def rename(self, message, chat):
             newName = ''
             messageIsNotBlank = message != ''
@@ -126,9 +132,8 @@ class Tags(object):
 
             if message.isdigit():
                 taskId = int(message)
-                query = db.session.query(Task).filter_by(id=taskId, chat=chat)
                 try:
-                    task = query.one()
+                    task = self.findTask(taskId, chat)
                 except sqlalchemy.orm.exc.NoResultFound:
                     send_message("Task {} not found".format(taskId), chat)
                     return
@@ -148,13 +153,12 @@ class Tags(object):
     def duplicate(self, message, chat):
         if message.isdigit():
             taskId = int(message)
-            query = db.session.query(Task).filter_by(id=taskId, chat=chat)
             try:
-                task = query.one()
+                task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
                 send_message("Task {} not found".format(taskId), chat)
                 return
-
+                
             duplicatedTask = Task(chat=task.chat,
                                   name=task.name,
                                   status=task.status,
@@ -164,9 +168,8 @@ class Tags(object):
                                   duedate=task.duedate)
             db.session.add(duplicatedTask)
 
-            for dependentTask in task.dependencies.split(',')[:-1]:
-                query = db.session.query(Task).filter_by(id=int(dependentTask), chat=chat)
-                dependentTask = query.one()
+            for dependentTaskId in task.dependencies.split(',')[:-1]:
+                dependentTask= self.findTask(dependentTaskId, chat)
                 dependentTask.parents += '{},'.format(duplicatedTask.id)
 
             db.session.commit()
