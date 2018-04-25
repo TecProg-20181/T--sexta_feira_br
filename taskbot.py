@@ -184,13 +184,11 @@ class Tags(object):
                 "New task *TODO* [[{}]] {}".format(duplicatedTask.id,
                                                    duplicatedTask.name),
                                                    chat)
-        if not message.isdigit():
+        elif not message.isdigit():
             self.idErrorMessage(message, chat)
 
     def delete(self, message, chat):
-        if not message.isdigit():
-            self.idErrorMessage(message, chat)
-        else:
+        if message.isdigit():
             taskId = int(message)
             try:
                 task = self.findTask(taskId, chat)
@@ -203,23 +201,22 @@ class Tags(object):
             db.session.delete(task)
             db.session.commit()
             send_message("Task [[{}]] deleted".format(taskId), chat)
+        elif not message.isdigit():
+            self.idErrorMessage(message, chat)
 
-    def todo(self,msg, chat):
-        if not msg.isdigit():
-            send_message("You must inform the task id", chat)
-        else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+    def todo(self, message, chat):
+        if message.isdigit():
+            taskId = int(message)
             try:
-                task = query.one()
+                task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
+                self.idErrorMessage(message, chat)
                 return
             task.status = 'TODO'
             db.session.commit()
-            send_message(
-                "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+            send_message("*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+        if not message.isdigit():
+            self.idErrorMessage(message, chat)
 
     def doing(self,msg, chat):
         if not msg.isdigit():
