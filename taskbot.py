@@ -145,31 +145,37 @@ class Tags(object):
             elif not message.isdigit():
                 send_message("You must inform the task id", chat)
 
-    def duplicate(self,msg, chat):
-        if not msg.isdigit():
-            send_message("You must inform the task id", chat)
-        else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+    def duplicate(self, message, chat):
+        if message.isdigit():
+            taskId = int(message)
+            query = db.session.query(Task).filter_by(id=taskId, chat=chat)
             try:
                 task = query.one()
             except sqlalchemy.orm.exc.NoResultFound:
-                send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
+                send_message("Task {} not found".format(taskId), chat)
                 return
 
-            dtask = Task(chat=task.chat, name=task.name, status=task.status, dependencies=task.dependencies,
-                         parents=task.parents, priority=task.priority, duedate=task.duedate)
-            db.session.add(dtask)
+            duplicatedTask = Task(chat=task.chat,
+                                  name=task.name,
+                                  status=task.status,
+                                  dependencies=task.dependencies,
+                                  parents=task.parents,
+                                  priority=task.priority,
+                                  duedate=task.duedate)
+            db.session.add(duplicatedTask)
 
-            for t in task.dependencies.split(',')[:-1]:
-                qy = db.session.query(Task).filter_by(id=int(t), chat=chat)
-                t = qy.one()
-                t.parents += '{},'.format(dtask.id)
+            for dependentTask in task.dependencies.split(',')[:-1]:
+                query = db.session.query(Task).filter_by(id=int(dependentTask), chat=chat)
+                dependentTask = query.one()
+                dependentTask.parents += '{},'.format(duplicatedTask.id)
 
             db.session.commit()
             send_message(
-                "New task *TODO* [[{}]] {}".format(dtask.id, dtask.name), chat)
+                "New task *TODO* [[{}]] {}".format(duplicatedTask.id,
+                                                   duplicatedTask.name),
+                                                   chat)
+        if not message.isdigit():
+            send_message("You must inform the task id", chat)
 
     def delete(self,msg, chat):
         if not msg.isdigit():
