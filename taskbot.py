@@ -270,59 +270,84 @@ class Tags(object):
 
         apiBot.send_message(a, chat)
 
-    def dependson(self, msg, chat, apiBot):
-        text = ''
-        if msg != '':
-            if len(msg.split(' ', 1)) > 1:
-                text = msg.split(' ', 1)[1]
-            msg = msg.split(' ', 1)[0]
+    def checkDependency(self, taskId, stringId, chat, apiBot):
+        dependencyIsPossible = True
+        taskFather = self.findTask(taskId, chat)
+        if taskFather.parents != '':
+            print(taskFather.parents)
+            for taskId in taskFather.parents.split(','):
+                if taskId != '':
+                    grandfatherId = int(taskId)
+                    dependencyIsPossible = self.checkDependency(grandfatherId,
+                                                                 stringId,
+                                                                 chat,
+                                                                 apiBot)
+                    if taskId == stringId:
+                        dependencyIsPossible = False
+                        apiBot.send_message(
+                            "This dependency is not possible",chat)
+                        break
+        return dependencyIsPossible
 
-        if not msg.isdigit():
-            apiBot.send_message("You must inform the task id", chat)
+    def dependson(self, message, chat, apiBot):
+        sonId = ''
+        messageIsNotBlank = message != ''
+        if messageIsNotBlank:
+            if len(message.split(' ', 1)) > 1:
+                sonId = message.split(' ', 1)[1]
+            fatherId = message.split(' ', 1)[0]
         else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+            apiBot.send_message("Please, write something",chat)
+            return
+
+        if not fatherId.isdigit():
+            self.idErrorMessage(fatherId, chat, apiBot)
+        else:
+            taskFatherId = int(fatherId)
             try:
-                task = query.one()
+                taskFather = self.findTask(taskFatherId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                apiBot.send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
+                self.idErrorMessage(fatherId, chat, apiBot)
                 return
 
-            if text == '':
-                for i in task.dependencies.split(',')[:-1]:
-                    i = int(i)
-                    q = db.session.query(Task).filter_by(id=i, chat=chat)
-                    t = q.one()
-                    t.parents = t.parents.replace(
-                        '{},'.format(task.id), '')
+            sonIdIsBlank = sonId == ''
+            if sonIdIsBlank:
+                for taskSon in taskFather.dependencies.split(',')[:-1]:
+                    taskSon = int(taskSon)
+                    taskSon = self.findTask(taskSon, chat)
+                    taskSon.parents = taskSon.parents.replace(
+                        '{},'.format(taskFather.id), '')
 
-                task.dependencies = ''
+                taskFather.dependencies = ''
                 apiBot.send_message(
-                    "Dependencies removed from task {}".format(task_id), chat)
+                    "Dependencies removed from task {}".format(taskFatherId), chat)
             else:
-                for depid in text.split(' '):
-                    if not depid.isdigit():
+                for taskId in sonId.split(' '):
+                    if not taskId.isdigit():
                         apiBot.send_message(
-                            "All dependencies ids must be numeric, and not {}".format(depid), chat)
+                            "All dependencies ids must be numeric, and not {}".format(taskId), chat)
                     else:
-                        depid = int(depid)
-                        query = db.session.query(
-                            Task).filter_by(id=depid, chat=chat)
-                    try:
-                        taskdep = query.one()
-                        taskdep.parents += str(task.id) + ','
-                    except sqlalchemy.orm.exc.NoResultFound:
-                        apiBot.send_message(
-                            "_404_ Task {} not found x.x".format(depid), chat)
-                        continue
+                        stringId = taskId
+                        taskId = int(taskId)
+                        try:
+                            dependencyIsPossible = self.checkDependency(taskFatherId,
+                                                                         stringId,
+                                                                         chat,
+                                                                         apiBot)
+                            if dependencyIsPossible == False:
+                                continue
+                            task = self.findTask(taskId, chat)
+                            task.parents += str(taskFather.id) + ','
+                        except sqlalchemy.orm.exc.NoResultFound:
+                            self.idErrorMessage(stringId, chat, apiBot)
+                            continue
 
-                    deplist = task.dependencies.split(',')
-                    if str(depid) not in deplist:
-                        task.dependencies += str(depid) + ','
+                        dependentList = taskFather.dependencies.split(',')
+                        if str(taskId) not in dependentList:
+                            taskFather.dependencies += str(taskId) + ','
             db.session.commit()
             apiBot.send_message(
-                "Task {} dependencies up to date".format(task_id), chat)
+                "Task {} dependencies up to date".format(taskFatherId), chat)
 
     def priority(self, msg, chat, apiBot):
         text = ''
