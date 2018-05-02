@@ -130,13 +130,18 @@ class Tags(object):
         else:
             apiBot.send_message("You must inform the task id", chat)
 
+    def separateMessage(self, message):
+        if len(message.split(' ', 1)) > 1:
+            termsList = message.split(' ', 1)[1]
+        priorityId = message.split(' ', 1)[0]
+
+        return priorityId, termsList
+
     def rename(self, message, chat, apiBot):
         newName = ''
         messageIsNotBlank = message != ''
         if messageIsNotBlank:
-            if len(message.split(' ', 1)) > 1:
-                newName = message.split(' ', 1)[1]
-            message = message.split(' ', 1)[0]
+            message, newName = self.separateMessage(message)
 
         if message.isdigit():
             taskId = int(message)
@@ -296,9 +301,8 @@ class Tags(object):
         sonId = ''
         messageIsNotBlank = message != ''
         if messageIsNotBlank:
-            if len(message.split(' ', 1)) > 1:
-                sonId = message.split(' ', 1)[1]
-            fatherId = message.split(' ', 1)[0]
+            fatherId, sonId = self.separateMessage(message)
+
         else:
             apiBot.send_message("Please, write something", chat)
             return
