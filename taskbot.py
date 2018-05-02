@@ -141,7 +141,9 @@ class Tags(object):
         newName = ''
         messageIsNotBlank = message != ''
         if messageIsNotBlank:
-            message, newName = self.separateMessage(message)
+            if len(message.split(' ', 1)) > 1:
+                newName = message.split(' ', 1)[1]
+            message = message.split(' ', 1)[0]
 
         if message.isdigit():
             taskId = int(message)
@@ -301,7 +303,9 @@ class Tags(object):
         sonId = ''
         messageIsNotBlank = message != ''
         if messageIsNotBlank:
-            fatherId, sonId = self.separateMessage(message)
+            if len(message.split(' ', 1)) > 1:
+                sonId = message.split(' ', 1)[1]
+            fatherId = message.split(' ', 1)[0]
 
         else:
             apiBot.send_message("Please, write something", chat)
