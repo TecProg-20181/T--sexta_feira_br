@@ -94,10 +94,12 @@ def deps_text(task, chat, preceed=''):
             icon = '\U00002611'
 
         if i + 1 == len(task.dependencies.split(',')[:-1]):
-            line += '└── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
+            line += '└── [[{}]] {} {} [[{}]]\n'.format(
+                dep.id, icon, dep.name, task.priority)
             line += deps_text(dep, chat, preceed + '    ')
         else:
-            line += '├── [[{}]] {} {}\n'.format(dep.id, icon, dep.name)
+            line += '├── [[{}]] {} {} [[{}]]\n'.format(
+                dep.id, icon, dep.name, task.priority)
             line += deps_text(dep, chat, preceed + '│   ')
 
         text += line
@@ -110,7 +112,7 @@ class Tags(object):
 
     def new(self, msg, chat, apiBot):
         task = Task(chat=chat, name=msg, status='TODO',
-                    dependencies='', parents='', priority='')
+                    dependencies='', parents='', priority='low')
         db.session.add(task)
         db.session.commit()
         apiBot.send_message(
@@ -141,7 +143,7 @@ class Tags(object):
             try:
                 task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat,apiBot)
+                self.idErrorMessage(message, chat, apiBot)
                 return
 
             newNameIsBlank = newName == ''
@@ -156,7 +158,7 @@ class Tags(object):
             apiBot.send_message("Task {} redefined from {} to {}".format(
                 taskId, oldName, newName), chat)
         elif not message.isdigit():
-            self.idErrorMessage(message, chat,apiBot)
+            self.idErrorMessage(message, chat, apiBot)
 
     def duplicate(self, message, chat, apiBot):
         if message.isdigit():
@@ -164,7 +166,7 @@ class Tags(object):
             try:
                 task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat,apiBot)
+                self.idErrorMessage(message, chat, apiBot)
                 return
 
             duplicatedTask = Task(chat=task.chat,
@@ -186,7 +188,7 @@ class Tags(object):
                                                    duplicatedTask.name),
                 chat)
         elif not message.isdigit():
-            self.idErrorMessage(message, chat,apiBot)
+            self.idErrorMessage(message, chat, apiBot)
 
     def delete(self, message, chat, apiBot):
         if message.isdigit():
@@ -194,7 +196,7 @@ class Tags(object):
             try:
                 task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat,apiBot)
+                self.idErrorMessage(message, chat, apiBot)
                 return
             for dependentTaskId in task.dependencies.split(',')[:-1]:
                 dependentTask = self.findTask(dependentTaskId, chat)
@@ -204,7 +206,7 @@ class Tags(object):
             db.session.commit()
             apiBot.send_message("Task [[{}]] deleted".format(taskId), chat)
         elif not message.isdigit():
-            self.idErrorMessage(message, chat,apiBot)
+            self.idErrorMessage(message, chat, apiBot)
 
     def changeStatus(self, message, chat, apiBot, command):
         if message.isdigit():
@@ -212,7 +214,7 @@ class Tags(object):
             try:
                 task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat,apiBot)
+                self.idErrorMessage(message, chat, apiBot)
                 return
             if command == '/todo':
                 task.status = 'TODO'
@@ -242,7 +244,8 @@ class Tags(object):
             elif task.status == 'DONE':
                 icon = '\U00002611'
 
-            a += '[[{}]] {} {}\n'.format(task.id, icon, task.name)
+            a += '[[{}]] {} {} [[{}]]\n'.format(task.id,
+                                                icon, task.name, task.priority)
             a += deps_text(task, chat)
 
         apiBot.send_message(a, chat)
@@ -279,13 +282,13 @@ class Tags(object):
                 if taskId != '':
                     grandfatherId = int(taskId)
                     dependencyIsPossible = self.checkDependency(grandfatherId,
-                                                                 stringId,
-                                                                 chat,
-                                                                 apiBot)
+                                                                stringId,
+                                                                chat,
+                                                                apiBot)
                     if taskId == stringId:
                         dependencyIsPossible = False
                         apiBot.send_message(
-                            "This dependency is not possible",chat)
+                            "This dependency is not possible", chat)
                         break
         return dependencyIsPossible
 
@@ -297,7 +300,7 @@ class Tags(object):
                 sonId = message.split(' ', 1)[1]
             fatherId = message.split(' ', 1)[0]
         else:
-            apiBot.send_message("Please, write something",chat)
+            apiBot.send_message("Please, write something", chat)
             return
 
         if not fatherId.isdigit():
@@ -331,9 +334,9 @@ class Tags(object):
                         taskId = int(taskId)
                         try:
                             dependencyIsPossible = self.checkDependency(taskFatherId,
-                                                                         stringId,
-                                                                         chat,
-                                                                         apiBot)
+                                                                        stringId,
+                                                                        chat,
+                                                                        apiBot)
                             if dependencyIsPossible == False:
                                 continue
                             task = self.findTask(taskId, chat)
