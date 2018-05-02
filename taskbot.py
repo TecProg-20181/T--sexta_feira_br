@@ -206,7 +206,7 @@ class Tags(object):
         elif not message.isdigit():
             self.idErrorMessage(message, chat,apiBot)
 
-    def todo(self, message, chat, apiBot):
+    def changeStatus(self, message, chat, apiBot, command):
         if message.isdigit():
             taskId = int(message)
             try:
@@ -214,44 +214,21 @@ class Tags(object):
             except sqlalchemy.orm.exc.NoResultFound:
                 self.idErrorMessage(message, chat,apiBot)
                 return
-            task.status = 'TODO'
-            db.session.commit()
-            apiBot.send_message(
-                "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
-        elif not message.isdigit():
-            self.idErrorMessage(message, chat,apiBot)
-
-    def doing(self, message, chat, apiBot):
-        if message.isdigit():
-            taskId = int(message)
-            try:
-                task = self.findTask(taskId, chat)
-            except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat,apiBot)
-                return
-            task.status = 'DOING'
-            db.session.commit()
-            apiBot.send_message(
-                "*DOING* task [[{}]] {}".format(task.id, task.name), chat)
-        elif not message.isdigit():
-            self.idErrorMessage(message, chat,apiBot)
-
-    def done(self, msg, chat, apiBot):
-        if not msg.isdigit():
-            apiBot.send_message("You must inform the task id", chat)
-        else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
-            try:
-                task = query.one()
-            except sqlalchemy.orm.exc.NoResultFound:
+            if command == '/todo':
+                task.status = 'TODO'
                 apiBot.send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
-                return
-            task.status = 'DONE'
+                    "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+            elif command == '/doing':
+                task.status = 'DOING'
+                apiBot.send_message(
+                    "*DOING* task [[{}]] {}".format(task.id, task.name), chat)
+            else:
+                task.status = 'DONE'
+                apiBot.send_message(
+                    "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
             db.session.commit()
-            apiBot.send_message(
-                "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
+        elif not message.isdigit():
+            self.idErrorMessage(message, chat, apiBot)
 
     def list_tasks(self, chat, apiBot):
         a = ''
@@ -410,18 +387,14 @@ def handle_updates(updates):
             tags.duplicate(msg, chat, apiBot)
         elif command == '/delete':
             tags.delete(msg, chat, apiBot)
-
         elif command == '/todo':
-            tags.todo(msg, chat, apiBot)
-
+            tags.changeStatus(msg, chat, apiBot, command)
         elif command == '/doing':
-            tags.doing(msg, chat, apiBot)
+            tags.changeStatus(msg, chat, apiBot, command)
         elif command == '/done':
-            tags.done(msg, chat, apiBot)
-
+            tags.changeStatus(msg, chat, apiBot, command)
         elif command == '/list':
             tags.list_tasks(chat, apiBot)
-
         elif command == '/dependson':
             tags.dependson(msg, chat, apiBot)
         elif command == '/priority':
