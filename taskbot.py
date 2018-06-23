@@ -131,6 +131,8 @@ class Tags(object):
             apiBot.send_message("You must inform the task id", chat)
 
     def separateMessage(self, message):
+        termsList = ''
+
         if len(message.split(' ', 1)) > 1:
             termsList = message.split(' ', 1)[1]
         priorityId = message.split(' ', 1)[0]
@@ -141,16 +143,14 @@ class Tags(object):
         newName = ''
         messageIsNotBlank = message != ''
         if messageIsNotBlank:
-            if len(message.split(' ', 1)) > 1:
-                newName = message.split(' ', 1)[1]
-            message = message.split(' ', 1)[0]
+            priorityId, newName = self.separateMessage(message)
 
-        if message.isdigit():
-            taskId = int(message)
+        if priorityId.isdigit():
+            taskId = int(priorityId)
             try:
                 task = self.findTask(taskId, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat, apiBot)
+                self.idErrorMessage(priorityId, chat, apiBot)
                 return
 
             newNameIsBlank = newName == ''
@@ -164,8 +164,8 @@ class Tags(object):
             db.session.commit()
             apiBot.send_message("Task {} redefined from {} to {}".format(
                 taskId, oldName, newName), chat)
-        elif not message.isdigit():
-            self.idErrorMessage(message, chat, apiBot)
+        else:
+            self.idErrorMessage(priorityId, chat, apiBot)
 
     def duplicate(self, message, chat, apiBot):
         if message.isdigit():
@@ -194,7 +194,7 @@ class Tags(object):
                 "New task *TODO* [[{}]] {}".format(duplicatedTask.id,
                                                    duplicatedTask.name),
                 chat)
-        elif not message.isdigit():
+        else:
             self.idErrorMessage(message, chat, apiBot)
 
     def delete(self, message, chat, apiBot):
@@ -212,7 +212,7 @@ class Tags(object):
             db.session.delete(task)
             db.session.commit()
             apiBot.send_message("Task [[{}]] deleted".format(taskId), chat)
-        elif not message.isdigit():
+        else:
             self.idErrorMessage(message, chat, apiBot)
 
     def changeStatus(self, message, chat, apiBot, command):
@@ -236,12 +236,12 @@ class Tags(object):
                 apiBot.send_message(
                     "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
             db.session.commit()
-        elif not message.isdigit():
+        else:
             self.idErrorMessage(message, chat, apiBot)
 
-    def list_tasks(self, chat, apiBot):
-        a = ''
-        a += '\U0001F4CB Task List\n'
+    def listTasks(self, chat, apiBot):
+        taskList = ''
+        taskList += '\U0001F4CB Task List\n'
         query = db.session.query(Task).filter_by(
             parents='', chat=chat).order_by(Task.id)
         for task in query.all():
@@ -251,34 +251,34 @@ class Tags(object):
             elif task.status == 'DONE':
                 icon = '\U00002611'
 
-            a += '[[{}]] {} {} [[{}]]\n'.format(task.id,
+            taskList += '[[{}]] {} {} [[{}]]\n'.format(task.id,
                                                 icon, task.name, task.priority)
-            a += deps_text(task, chat)
+            taskList += deps_text(task, chat)
 
-        apiBot.send_message(a, chat)
-        a = ''
+        apiBot.send_message(taskList, chat)
+        taskList = ''
 
-        a += '\U0001F4DD _Status_\n'
+        taskList += '\U0001F4DD _Status_\n'
         query = db.session.query(Task).filter_by(
             status='TODO', chat=chat).order_by(Task.id)
 
-        a += '\n\U0001F195 *TODO*\n'
+        taskList += '\n\U0001F195 *TODO*\n'
         for task in query.all():
-            a += '[[{}]] {}\n'.format(task.id, task.name)
+            taskList += '[[{}]] {}\n'.format(task.id, task.name)
         query = db.session.query(Task).filter_by(
             status='DOING', chat=chat).order_by(Task.id)
 
-        a += '\n\U000023FA *DOING*\n'
+        taskList += '\n\U000023FA *DOING*\n'
         for task in query.all():
-            a += '[[{}]] {}\n'.format(task.id, task.name)
+            taskList += '[[{}]] {}\n'.format(task.id, task.name)
         query = db.session.query(Task).filter_by(
             status='DONE', chat=chat).order_by(Task.id)
 
-        a += '\n\U00002611 *DONE*\n'
+        taskList += '\n\U00002611 *DONE*\n'
         for task in query.all():
-            a += '[[{}]] {}\n'.format(task.id, task.name)
+            taskList += '[[{}]] {}\n'.format(task.id, task.name)
 
-        apiBot.send_message(a, chat)
+        apiBot.send_message(taskList, chat)
 
     def checkDependency(self, taskId, stringId, chat, apiBot):
         dependencyIsPossible = True
@@ -303,17 +303,13 @@ class Tags(object):
         sonId = ''
         messageIsNotBlank = message != ''
         if messageIsNotBlank:
-            if len(message.split(' ', 1)) > 1:
-                sonId = message.split(' ', 1)[1]
-            fatherId = message.split(' ', 1)[0]
+            fatherId, sonId = self.separateMessage(message)
 
         else:
             apiBot.send_message("Please, write something", chat)
             return
 
-        if not fatherId.isdigit():
-            self.idErrorMessage(fatherId, chat, apiBot)
-        else:
+        if fatherId.isdigit():
             taskFatherId = int(fatherId)
             try:
                 taskFather = self.findTask(taskFatherId, chat)
@@ -359,6 +355,8 @@ class Tags(object):
             db.session.commit()
             apiBot.send_message(
                 "Task {} dependencies up to date".format(taskFatherId), chat)
+        else:
+            self.idErrorMessage(fatherId, chat, apiBot)
 
     def priority(self, msg, chat, apiBot):
         text = ''
@@ -430,7 +428,7 @@ def handle_updates(updates):
         elif command == '/done':
             tags.changeStatus(msg, chat, apiBot, command)
         elif command == '/list':
-            tags.list_tasks(chat, apiBot)
+            tags.listTasks(chat, apiBot)
         elif command == '/dependson':
             tags.dependson(msg, chat, apiBot)
         elif command == '/priority':
