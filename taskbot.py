@@ -28,9 +28,9 @@ URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 HELP = """
  /new NOME
- /todo ID
- /doing ID
- /done ID
+ /todo ID...
+ /doing ID...
+ /done ID...
  /delete ID
  /list
  /rename ID NOME
@@ -216,28 +216,29 @@ class Tags(object):
             self.idErrorMessage(message, chat, apiBot)
 
     def changeStatus(self, message, chat, apiBot, command):
-        if message.isdigit():
-            taskId = int(message)
-            try:
-                task = self.findTask(taskId, chat)
-            except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat, apiBot)
-                return
-            if command == '/todo':
-                task.status = 'TODO'
-                apiBot.send_message(
-                    "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
-            elif command == '/doing':
-                task.status = 'DOING'
-                apiBot.send_message(
-                    "*DOING* task [[{}]] {}".format(task.id, task.name), chat)
+        for taskId in message.split(' '):
+            if taskId.isdigit():
+                taskId = int(taskId)
+                try:
+                    task = self.findTask(taskId, chat)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    self.idErrorMessage(message, chat, apiBot)
+                    return
+                if command == '/todo':
+                    task.status = 'TODO'
+                    apiBot.send_message(
+                        "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+                elif command == '/doing':
+                    task.status = 'DOING'
+                    apiBot.send_message(
+                        "*DOING* task [[{}]] {}".format(task.id, task.name), chat)
+                else:
+                    task.status = 'DONE'
+                    apiBot.send_message(
+                        "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
+                db.session.commit()
             else:
-                task.status = 'DONE'
-                apiBot.send_message(
-                    "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
-            db.session.commit()
-        else:
-            self.idErrorMessage(message, chat, apiBot)
+                self.idErrorMessage(message, chat, apiBot)
 
     def listTasks(self, chat, apiBot):
         taskList = ''
@@ -358,39 +359,36 @@ class Tags(object):
         else:
             self.idErrorMessage(fatherId, chat, apiBot)
 
-    def priority(self, msg, chat, apiBot):
+    def priority(self, message, chat, apiBot):
         text = ''
-        if msg != '':
-            if len(msg.split(' ', 1)) > 1:
-                text = msg.split(' ', 1)[1]
-            msg = msg.split(' ', 1)[0]
+        if message != '':
+            taskId, priority = self.separateMessage(message)
 
-        if not msg.isdigit():
-            apiBot.send_message("You must inform the task id", chat)
-        else:
-            task_id = int(msg)
-            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+        if taskId.isdigit():
+            taskId = int(taskId)
+            query = db.session.query(Task).filter_by(id=taskId, chat=chat)
             try:
                 task = query.one()
             except sqlalchemy.orm.exc.NoResultFound:
                 apiBot.send_message(
-                    "_404_ Task {} not found x.x".format(task_id), chat)
+                    "_404_ Task {} not found x.x".format(taskId), chat)
                 return
 
-            if text == '':
+            if priority == '':
                 task.priority = ''
                 apiBot.send_message(
-                    "_Cleared_ all priorities from task {}".format(task_id), chat)
+                    "_Cleared_ all priorities from task {}".format(taskId), chat)
             else:
-                if text.lower() not in ['high', 'medium', 'low']:
+                if priority.lower() not in ['high', 'medium', 'low']:
                     apiBot.send_message(
                         "The priority *must be* one of the following: high, medium, low", chat)
                 else:
-                    task.priority = text.lower()
+                    task.priority = priority.lower()
                     apiBot.send_message(
-                        "*Task {}* priority has priority *{}*".format(task_id, text.lower()), chat)
+                        "*Task {}* priority has priority *{}*".format(taskId, priority.lower()), chat)
             db.session.commit()
-
+        else:
+            apiBot.send_message("You must inform the task id", chat)
 
 def handle_updates(updates):
     tags = Tags()
