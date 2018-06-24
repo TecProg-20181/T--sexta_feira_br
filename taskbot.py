@@ -118,111 +118,111 @@ class Tags(object):
         apiBot.send_message(
             "New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
-    def findTask(self, taskId, chat):
-        query = db.session.query(Task).filter_by(id=taskId, chat=chat)
+    def find_task(self, task_id, chat):
+        query = db.session.query(Task).filter_by(id=task_id, chat=chat)
         task = query.one()
 
         return task
 
-    def idErrorMessage(self, message, chat, apiBot):
+    def id_error_message(self, message, chat, apiBot):
         if message.isdigit():
             apiBot.send_message("Task {} not found".format(message), chat)
         else:
             apiBot.send_message("You must inform the task id", chat)
 
-    def separateMessage(self, message):
-        termsList = ''
+    def separate_message(self, message):
+        terms_list = ''
 
         if len(message.split(' ', 1)) > 1:
-            termsList = message.split(' ', 1)[1]
-        priorityId = message.split(' ', 1)[0]
+            terms_list = message.split(' ', 1)[1]
+        priority_id = message.split(' ', 1)[0]
 
-        return priorityId, termsList
+        return priority_id, terms_list
 
     def rename(self, message, chat, apiBot):
-        newName = ''
-        messageIsNotBlank = message != ''
-        if messageIsNotBlank:
-            priorityId, newName = self.separateMessage(message)
+        new_name = ''
+        message_is_not_blank = message != ''
+        if message_is_not_blank:
+            priority_id, new_name = self.separate_message(message)
 
-        if priorityId.isdigit():
-            taskId = int(priorityId)
+        if priority_id.isdigit():
+            task_id = int(priority_id)
             try:
-                task = self.findTask(taskId, chat)
+                task = self.find_task(task_id, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(priorityId, chat, apiBot)
+                self.id_error_message(priority_id, chat, apiBot)
                 return
 
-            newNameIsBlank = newName == ''
-            if newNameIsBlank:
+            new_name_is_blank = new_name == ''
+            if new_name_is_blank:
                 apiBot.send_message(
-                    "You want to modify task {}, but you didn't provide any new name".format(taskId), chat)
+                    "You want to modify task {}, but you didn't provide any new name".format(task_id), chat)
                 return
 
-            oldName = task.name
-            task.name = newName
+            old_name = task.name
+            task.name = new_name
             db.session.commit()
             apiBot.send_message("Task {} redefined from {} to {}".format(
-                taskId, oldName, newName), chat)
+                task_id, old_name, new_name), chat)
         else:
-            self.idErrorMessage(priorityId, chat, apiBot)
+            self.id_error_message(priority_id, chat, apiBot)
 
     def duplicate(self, message, chat, apiBot):
         if message.isdigit():
-            taskId = int(message)
+            task_id = int(message)
             try:
-                task = self.findTask(taskId, chat)
+                task = self.find_task(task_id, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat, apiBot)
+                self.id_error_message(message, chat, apiBot)
                 return
 
-            duplicatedTask = Task(chat=task.chat,
+            duplicated_task = Task(chat=task.chat,
                                   name=task.name,
                                   status=task.status,
                                   dependencies=task.dependencies,
                                   parents=task.parents,
                                   priority=task.priority,
                                   duedate=task.duedate)
-            db.session.add(duplicatedTask)
+            db.session.add(duplicated_task)
 
-            for dependentTaskId in task.dependencies.split(',')[:-1]:
-                dependentTask = self.findTask(dependentTaskId, chat)
-                dependentTask.parents += '{},'.format(duplicatedTask.id)
+            for dependent_task_id in task.dependencies.split(',')[:-1]:
+                dependent_task = self.find_task(dependent_task_id, chat)
+                dependent_task.parents += '{},'.format(duplicated_task.id)
 
             db.session.commit()
             apiBot.send_message(
-                "New task *TODO* [[{}]] {}".format(duplicatedTask.id,
-                                                   duplicatedTask.name),
+                "New task *TODO* [[{}]] {}".format(duplicated_task.id,
+                                                   duplicated_task.name),
                 chat)
         else:
-            self.idErrorMessage(message, chat, apiBot)
+            self.id_error_message(message, chat, apiBot)
 
     def delete(self, message, chat, apiBot):
         if message.isdigit():
-            taskId = int(message)
+            task_id = int(message)
             try:
-                task = self.findTask(taskId, chat)
+                task = self.find_task(task_id, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(message, chat, apiBot)
+                self.id_error_message(message, chat, apiBot)
                 return
-            for dependentTaskId in task.dependencies.split(',')[:-1]:
-                dependentTask = self.findTask(dependentTaskId, chat)
-                dependentTask.parents = dependentTask.parents.replace(
+            for dependent_task_id in task.dependencies.split(',')[:-1]:
+                dependent_task = self.find_task(dependent_task_id, chat)
+                dependent_task.parents = dependent_task.parents.replace(
                     '{},'.format(task.id), '')
             db.session.delete(task)
             db.session.commit()
-            apiBot.send_message("Task [[{}]] deleted".format(taskId), chat)
+            apiBot.send_message("Task [[{}]] deleted".format(task_id), chat)
         else:
-            self.idErrorMessage(message, chat, apiBot)
+            self.id_error_message(message, chat, apiBot)
 
-    def changeStatus(self, message, chat, apiBot, command):
-        for taskId in message.split(' '):
-            if taskId.isdigit():
-                taskId = int(taskId)
+    def change_status(self, message, chat, apiBot, command):
+        for task_id in message.split(' '):
+            if task_id.isdigit():
+                task_id = int(task_id)
                 try:
-                    task = self.findTask(taskId, chat)
+                    task = self.find_task(task_id, chat)
                 except sqlalchemy.orm.exc.NoResultFound:
-                    self.idErrorMessage(message, chat, apiBot)
+                    self.id_error_message(message, chat, apiBot)
                     return
                 if command == '/todo':
                     task.status = 'TODO'
@@ -238,11 +238,11 @@ class Tags(object):
                         "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
                 db.session.commit()
             else:
-                self.idErrorMessage(message, chat, apiBot)
+                self.id_error_message(message, chat, apiBot)
 
-    def listTasks(self, chat, apiBot):
-        taskList = ''
-        taskList += '\U0001F4CB Task List\n'
+    def list_tasks(self, chat, apiBot):
+        task_list = ''
+        task_list += '\U0001F4CB Task List\n'
         query = db.session.query(Task).filter_by(
             parents='', chat=chat).order_by(Task.id)
         for task in query.all():
@@ -252,132 +252,132 @@ class Tags(object):
             elif task.status == 'DONE':
                 icon = '\U00002611'
 
-            taskList += '[[{}]] {} {} [[{}]]\n'.format(task.id,
+            task_list += '[[{}]] {} {} [[{}]]\n'.format(task.id,
                                                 icon, task.name, task.priority)
-            taskList += deps_text(task, chat)
+            task_list += deps_text(task, chat)
 
-        apiBot.send_message(taskList, chat)
-        taskList = ''
+        apiBot.send_message(task_list, chat)
+        task_list = ''
 
-        taskList += '\U0001F4DD _Status_\n'
+        task_list += '\U0001F4DD _Status_\n'
         query = db.session.query(Task).filter_by(
             status='TODO', chat=chat).order_by(Task.id)
 
-        taskList += '\n\U0001F195 *TODO*\n'
+        task_list += '\n\U0001F195 *TODO*\n'
         for task in query.all():
-            taskList += '[[{}]] {}\n'.format(task.id, task.name)
+            task_list += '[[{}]] {}\n'.format(task.id, task.name)
         query = db.session.query(Task).filter_by(
             status='DOING', chat=chat).order_by(Task.id)
 
-        taskList += '\n\U000023FA *DOING*\n'
+        task_list += '\n\U000023FA *DOING*\n'
         for task in query.all():
-            taskList += '[[{}]] {}\n'.format(task.id, task.name)
+            task_list += '[[{}]] {}\n'.format(task.id, task.name)
         query = db.session.query(Task).filter_by(
             status='DONE', chat=chat).order_by(Task.id)
 
-        taskList += '\n\U00002611 *DONE*\n'
+        task_list += '\n\U00002611 *DONE*\n'
         for task in query.all():
-            taskList += '[[{}]] {}\n'.format(task.id, task.name)
+            task_list += '[[{}]] {}\n'.format(task.id, task.name)
 
-        apiBot.send_message(taskList, chat)
+        apiBot.send_message(task_list, chat)
 
-    def checkDependency(self, taskId, stringId, chat, apiBot):
-        dependencyIsPossible = True
-        taskFather = self.findTask(taskId, chat)
-        if taskFather.parents != '':
-            print(taskFather.parents)
-            for taskId in taskFather.parents.split(','):
-                if taskId != '':
-                    grandfatherId = int(taskId)
-                    dependencyIsPossible = self.checkDependency(grandfatherId,
-                                                                stringId,
+    def check_dependency(self, task_id, string_id, chat, apiBot):
+        dependency_is_possible = True
+        task_father = self.find_task(task_id, chat)
+        if task_father.parents != '':
+            print(task_father.parents)
+            for task_id in task_father.parents.split(','):
+                if task_id != '':
+                    grandfather_id = int(task_id)
+                    dependency_is_possible = self.check_dependency(grandfather_id,
+                                                                string_id,
                                                                 chat,
                                                                 apiBot)
-                    if taskId == stringId:
-                        dependencyIsPossible = False
+                    if task_id == string_id:
+                        dependency_is_possible = False
                         apiBot.send_message(
                             "This dependency is not possible", chat)
                         break
-        return dependencyIsPossible
+        return dependency_is_possible
 
     def dependson(self, message, chat, apiBot):
-        sonId = ''
-        messageIsNotBlank = message != ''
-        if messageIsNotBlank:
-            fatherId, sonId = self.separateMessage(message)
+        son_id = ''
+        message_is_not_blank = message != ''
+        if message_is_not_blank:
+            father_id, son_id = self.separate_message(message)
 
         else:
             apiBot.send_message("Please, write something", chat)
             return
 
-        if fatherId.isdigit():
-            taskFatherId = int(fatherId)
+        if father_id.isdigit():
+            task_father_id = int(father_id)
             try:
-                taskFather = self.findTask(taskFatherId, chat)
+                task_father = self.find_task(task_father_id, chat)
             except sqlalchemy.orm.exc.NoResultFound:
-                self.idErrorMessage(fatherId, chat, apiBot)
+                self.id_error_message(father_id, chat, apiBot)
                 return
 
-            sonIdIsBlank = sonId == ''
-            if sonIdIsBlank:
-                for taskSon in taskFather.dependencies.split(',')[:-1]:
-                    taskSon = int(taskSon)
-                    taskSon = self.findTask(taskSon, chat)
-                    taskSon.parents = taskSon.parents.replace(
-                        '{},'.format(taskFather.id), '')
+            son_id_is_blank = son_id == ''
+            if son_id_is_blank:
+                for task_son in task_father.dependencies.split(',')[:-1]:
+                    task_son = int(task_son)
+                    task_son = self.find_task(task_son, chat)
+                    task_son.parents = task_son.parents.replace(
+                        '{},'.format(task_father.id), '')
 
-                taskFather.dependencies = ''
+                task_father.dependencies = ''
                 apiBot.send_message(
-                    "Dependencies removed from task {}".format(taskFatherId), chat)
+                    "Dependencies removed from task {}".format(task_father_id), chat)
             else:
-                for taskId in sonId.split(' '):
-                    if not taskId.isdigit():
+                for task_id in son_id.split(' '):
+                    if not task_id.isdigit():
                         apiBot.send_message(
-                            "All dependencies ids must be numeric, and not {}".format(taskId), chat)
+                            "All dependencies ids must be numeric, and not {}".format(task_id), chat)
                     else:
-                        stringId = taskId
-                        taskId = int(taskId)
+                        string_id = task_id
+                        task_id = int(task_id)
                         try:
-                            dependencyIsPossible = self.checkDependency(taskFatherId,
-                                                                        stringId,
+                            dependency_is_possible = self.check_dependency(task_father_id,
+                                                                        string_id,
                                                                         chat,
                                                                         apiBot)
-                            if dependencyIsPossible == False:
+                            if dependency_is_possible == False:
                                 continue
-                            task = self.findTask(taskId, chat)
-                            task.parents += str(taskFather.id) + ','
+                            task = self.find_task(task_id, chat)
+                            task.parents += str(task_father.id) + ','
                         except sqlalchemy.orm.exc.NoResultFound:
-                            self.idErrorMessage(stringId, chat, apiBot)
+                            self.id_error_message(string_id, chat, apiBot)
                             continue
 
-                        dependentList = taskFather.dependencies.split(',')
-                        if str(taskId) not in dependentList:
-                            taskFather.dependencies += str(taskId) + ','
+                        dependent_list = task_father.dependencies.split(',')
+                        if str(task_id) not in dependent_list:
+                            task_father.dependencies += str(task_id) + ','
             db.session.commit()
             apiBot.send_message(
-                "Task {} dependencies up to date".format(taskFatherId), chat)
+                "Task {} dependencies up to date".format(task_father_id), chat)
         else:
-            self.idErrorMessage(fatherId, chat, apiBot)
+            self.id_error_message(father_id, chat, apiBot)
 
     def priority(self, message, chat, apiBot):
         text = ''
         if message != '':
-            taskId, priority = self.separateMessage(message)
+            task_id, priority = self.separate_message(message)
 
-        if taskId.isdigit():
-            taskId = int(taskId)
-            query = db.session.query(Task).filter_by(id=taskId, chat=chat)
+        if task_id.isdigit():
+            task_id = int(task_id)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
             try:
                 task = query.one()
             except sqlalchemy.orm.exc.NoResultFound:
                 apiBot.send_message(
-                    "_404_ Task {} not found x.x".format(taskId), chat)
+                    "_404_ Task {} not found x.x".format(task_id), chat)
                 return
 
             if priority == '':
                 task.priority = ''
                 apiBot.send_message(
-                    "_Cleared_ all priorities from task {}".format(taskId), chat)
+                    "_Cleared_ all priorities from task {}".format(task_id), chat)
             else:
                 if priority.lower() not in ['high', 'medium', 'low']:
                     apiBot.send_message(
@@ -385,7 +385,7 @@ class Tags(object):
                 else:
                     task.priority = priority.lower()
                     apiBot.send_message(
-                        "*Task {}* priority has priority *{}*".format(taskId, priority.lower()), chat)
+                        "*Task {}* priority has priority *{}*".format(task_id, priority.lower()), chat)
             db.session.commit()
         else:
             apiBot.send_message("You must inform the task id", chat)
@@ -420,13 +420,13 @@ def handle_updates(updates):
         elif command == '/delete':
             tags.delete(msg, chat, apiBot)
         elif command == '/todo':
-            tags.changeStatus(msg, chat, apiBot, command)
+            tags.change_status(msg, chat, apiBot, command)
         elif command == '/doing':
-            tags.changeStatus(msg, chat, apiBot, command)
+            tags.change_status(msg, chat, apiBot, command)
         elif command == '/done':
-            tags.changeStatus(msg, chat, apiBot, command)
+            tags.change_status(msg, chat, apiBot, command)
         elif command == '/list':
-            tags.listTasks(chat, apiBot)
+            tags.list_tasks(chat, apiBot)
         elif command == '/dependson':
             tags.dependson(msg, chat, apiBot)
         elif command == '/priority':
