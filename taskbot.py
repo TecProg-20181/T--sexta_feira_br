@@ -10,6 +10,7 @@ import sqlalchemy
 
 import db
 from db import Task
+import datetime
 
 # take out the token to other file
 FILENAME = "TOKEN.txt"
@@ -52,6 +53,7 @@ HELP = """
  /duplicate ID
  /priority ID PRIORITY{low, medium, high}
  /help
+ /date ID DAY/MONTH/YEAR
 """
 
 # put into a classe api
@@ -192,12 +194,12 @@ class Tags(object):
                 return
 
             duplicated_task = Task(chat=task.chat,
-                                  name=task.name,
-                                  status=task.status,
-                                  dependencies=task.dependencies,
-                                  parents=task.parents,
-                                  priority=task.priority,
-                                  duedate=task.duedate)
+                                   name=task.name,
+                                   status=task.status,
+                                   dependencies=task.dependencies,
+                                   parents=task.parents,
+                                   priority=task.priority,
+                                   duedate=task.duedate)
             db.session.add(duplicated_task)
 
             for dependent_task_id in task.dependencies.split(',')[:-1]:
@@ -267,8 +269,8 @@ class Tags(object):
             elif task.status == 'DONE':
                 icon = '\U00002611'
 
-            task_list += '[[{}]] {} {} [[{}]]\n'.format(task.id,
-                                                icon, task.name, task.priority)
+            task_list += '[[{}]] {} {} [[{}]]-----{}\n'.format(
+                task.id,icon, task.name,task.priority,task.duedate.strftime("%d/%m/%Y"))
             task_list += deps_text(task, chat)
 
         apiBot.send_message(task_list, chat)
@@ -305,9 +307,9 @@ class Tags(object):
                 if task_id != '':
                     grandfather_id = int(task_id)
                     dependency_is_possible = self.check_dependency(grandfather_id,
-                                                                string_id,
-                                                                chat,
-                                                                apiBot)
+                                                                   string_id,
+                                                                   chat,
+                                                                   apiBot)
                     if task_id == string_id:
                         dependency_is_possible = False
                         apiBot.send_message(
@@ -354,9 +356,9 @@ class Tags(object):
                         task_id = int(task_id)
                         try:
                             dependency_is_possible = self.check_dependency(task_father_id,
-                                                                        string_id,
-                                                                        chat,
-                                                                        apiBot)
+                                                                           string_id,
+                                                                           chat,
+                                                                           apiBot)
                             if dependency_is_possible == False:
                                 continue
                             task = self.find_task(task_id, chat)
@@ -402,8 +404,46 @@ class Tags(object):
                     apiBot.send_message(
                         "*Task {}* priority has priority *{}*".format(task_id, priority.lower()), chat)
             db.session.commit()
+
         else:
             apiBot.send_message("You must inform the task id", chat)
+
+    def set_date(self, msg, chat, apiBot):
+
+        day = 0
+        month = 0
+        year = 0
+
+        if msg != '':
+            msg, duedate = self.separate_message(msg)
+            if len(duedate.split('/', 2)) > 1:
+                month = int(duedate.split('/', 2)[1])
+                year = int(duedate.split('/', 2)[2])
+
+            day = int(duedate.split('/', 2)[0])
+        
+        if day > 31:
+            apiBot.send_message("Sorry,this day doesn't exist,please", chat)
+        elif month >12 :
+            apiBot.send_message("Sorry,this month doesn't exist", chat)
+        elif not msg.isdigit():
+            apiBot.send_message("You must inform the task id", chat)
+        else:
+            task_id = int(msg)
+            query = db.session.query(Task).filter_by(id=task_id, chat=chat)
+            try:
+                task = query.one()
+            except sqlalchemy.orm.exc.NoResultFound:
+                apiBot.send_message(
+                    "_404_ Task {} not found x.x".format(task_id), chat)
+                return
+
+            task.duedate = datetime.date(year, month, day)
+
+            db.session.commit()
+            apiBot.send_message(
+                "Your date is this {}".format(task.duedate.strftime("%d/%m/%Y")), chat)
+
 
 def handle_updates(updates):
     tags = Tags()
@@ -453,6 +493,8 @@ def handle_updates(updates):
         elif command == '/help':
             apiBot.send_message("Here is a list of things you can do.", chat)
             apiBot.send_message(HELP, chat)
+        elif command == '/date':
+            tags.set_date(msg, chat, apiBot)
         else:
             apiBot.send_message(
                 "I'm sorry dave. I'm afraid I can't do that.", chat)
