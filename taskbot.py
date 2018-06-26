@@ -4,6 +4,7 @@ import json
 import requests
 import time
 import urllib
+from github import Github
 
 import sqlalchemy
 
@@ -13,6 +14,8 @@ from db import Task
 # take out the token to other file
 FILENAME = "TOKEN.txt"
 
+# user name and password
+USERLOGIN = "user.txt"
 
 def read_file_token(FILENAME):
     print("Loading Token")
@@ -20,8 +23,19 @@ def read_file_token(FILENAME):
     TOKEN = inFile.readline().rstrip()
     return TOKEN
 
+def read_user_login(USERLOGIN):
+    print("Loading User")
+    inFile = open(USERLOGIN, 'r')
+    user_name = inFile.readline().rstrip()
+    user_password = inFile.readline().rstrip()
+
+    return user_name, user_password
 
 TOKEN = read_file_token(FILENAME)
+user_name, user_password = read_user_login(USERLOGIN)
+
+user_login = Github(user_name, user_password)
+repository = user_login.get_repo("TecProg-20181/T--sexta_feira_br")
 
 # after take out the token to other file
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
@@ -110,9 +124,10 @@ def deps_text(task, chat, preceed=''):
 class Tags(object):
     apiBot = API()
 
-    def new(self, msg, chat, apiBot):
-        task = Task(chat=chat, name=msg, status='TODO',
+    def new(self, message, chat, apiBot):
+        task = Task(chat=chat, name=message, status='TODO',
                     dependencies='', parents='', priority='low')
+        issue = repository.create_issue(message)
         db.session.add(task)
         db.session.commit()
         apiBot.send_message(
