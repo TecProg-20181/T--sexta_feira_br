@@ -39,6 +39,7 @@ HELP = """
  /duplicate ID
  /priority ID PRIORITY{low, medium, high}
  /help
+ /date ID DAY/MONTH/YEAR
 """
 
 # put into a classe api
@@ -253,8 +254,8 @@ class Tags(object):
             elif task.status == 'DONE':
                 icon = '\U00002611'
 
-            task_list += '[[{}]] {} {} [[{}]]\n'.format(task.id,
-                                                        icon, task.name, task.priority)
+            task_list += '[[{}]] {} {} [[{}]]-----{}\n'.format(
+                task.id,icon, task.name,task.priority,task.duedate.strftime("%d/%m/%Y"))
             task_list += deps_text(task, chat)
 
         apiBot.send_message(task_list, chat)
