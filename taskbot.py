@@ -128,8 +128,9 @@ class Tags(object):
 
     def new(self, message, chat, apiBot):
         task = Task(chat=chat, name=message, status='TODO',
-                    dependencies='', parents='', priority='low')
+                    dependencies='', parents='', priority='low', duedate= datetime.date(2100, 12, 12))
         issue = repository.create_issue(message)
+        task.issue_number = issue.number
         db.session.add(task)
         db.session.commit()
         apiBot.send_message(
@@ -178,6 +179,8 @@ class Tags(object):
 
             old_name = task.name
             task.name = new_name
+            issue = repository.get_issue(task.issue_number)
+            issue.edit(title=new_name)
             db.session.commit()
             apiBot.send_message("Task {} redefined from {} to {}".format(
                 task_id, old_name, new_name), chat)
@@ -226,6 +229,8 @@ class Tags(object):
                 dependent_task = self.find_task(dependent_task_id, chat)
                 dependent_task.parents = dependent_task.parents.replace(
                     '{},'.format(task.id), '')
+            issue = repository.get_issue(task.issue_number)
+            issue.edit(state='closed')
             db.session.delete(task)
             db.session.commit()
             apiBot.send_message("Task [[{}]] deleted".format(task_id), chat)
@@ -245,6 +250,8 @@ class Tags(object):
                     task.status = 'TODO'
                     apiBot.send_message(
                         "*TODO* task [[{}]] {}".format(task.id, task.name), chat)
+                    issue = repository.get_issue(task.issue_number)
+                    issue.edit(state='open')
                 elif command == '/doing':
                     task.status = 'DOING'
                     apiBot.send_message(
@@ -253,6 +260,8 @@ class Tags(object):
                     task.status = 'DONE'
                     apiBot.send_message(
                         "*DONE* task [[{}]] {}".format(task.id, task.name), chat)
+                    issue = repository.get_issue(task.issue_number)
+                    issue.edit(state='closed')
                 db.session.commit()
             else:
                 self.id_error_message(message, chat, apiBot)
@@ -421,7 +430,7 @@ class Tags(object):
                 year = int(duedate.split('/', 2)[2])
 
             day = int(duedate.split('/', 2)[0])
-        
+
         if day > 31:
             apiBot.send_message("Sorry,this day doesn't exist,please", chat)
         elif month >12 :
