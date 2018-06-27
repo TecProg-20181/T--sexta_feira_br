@@ -417,14 +417,14 @@ class Tags(object):
         else:
             apiBot.send_message("You must inform the task id", chat)
 
-    def set_date(self, msg, chat, apiBot):
+    def set_date(self, message, chat, apiBot):
 
         day = 0
         month = 0
         year = 0
 
-        if msg != '':
-            msg, duedate = self.separate_message(msg)
+        if message != '':
+            message, duedate = self.separate_message(message)
             if len(duedate.split('/', 2)) > 1:
                 month = int(duedate.split('/', 2)[1])
                 year = int(duedate.split('/', 2)[2])
@@ -435,10 +435,8 @@ class Tags(object):
             apiBot.send_message("Sorry,this day doesn't exist,please", chat)
         elif month >12 :
             apiBot.send_message("Sorry,this month doesn't exist", chat)
-        elif not msg.isdigit():
-            apiBot.send_message("You must inform the task id", chat)
-        else:
-            task_id = int(msg)
+        elif message.isdigit():
+            task_id = int(message)
             query = db.session.query(Task).filter_by(id=task_id, chat=chat)
             try:
                 task = query.one()
@@ -452,7 +450,8 @@ class Tags(object):
             db.session.commit()
             apiBot.send_message(
                 "Your date is this {}".format(task.duedate.strftime("%d/%m/%Y")), chat)
-
+        else:
+            apiBot.send_message("You must inform the task id", chat)
 
 def handle_updates(updates):
     tags = Tags()
