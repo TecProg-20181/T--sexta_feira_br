@@ -91,9 +91,9 @@ class API(object):
         js = json.loads(content)
         return js
 
-    
+
     def get_updates(self, offset=None):
- 
+
         url = URL + "getUpdates?timeout=100"
         if offset:
             url += "&offset={}".format(offset)
@@ -287,7 +287,7 @@ class Tags(object):
     def delete(self, message, chat, apiBot):
         """ Function description.
             :type message: string
-            :type chat: int        
+            :type chat: int
         """
         if message.isdigit():
             task_id = int(message)
@@ -312,7 +312,7 @@ class Tags(object):
     def change_status(self, message, chat, apiBot, command):
         """ Function description.
             :type message: string
-            :type chat: int        
+            :type chat: int
             :type command: string
         """
         for task_id in message.split(' '):
@@ -346,7 +346,7 @@ class Tags(object):
     @contract
     def list_tasks(self, chat, apiBot):
         """ Function description.
-            :type chat: int   
+            :type chat: int
         """
         task_list = ''
         task_list += '\U0001F4CB Task List\n'
@@ -417,7 +417,7 @@ class Tags(object):
     def dependson(self, message, chat, apiBot):
         """ Function description.
             :type message: string
-            :type chat: int 
+            :type chat: int
         """
 
         son_id = ''
@@ -482,7 +482,7 @@ class Tags(object):
     def priority(self, message, chat, apiBot):
         """ Function description.
             :type message: string
-            :type chat: int 
+            :type chat: int
         """
         text = ''
         if message != '':
@@ -519,7 +519,7 @@ class Tags(object):
     def set_date(self, message, chat, apiBot):
         """ Function description.
             :type message: string
-            :type chat: int        
+            :type chat: int
         """
         day = 0
         month = 0
