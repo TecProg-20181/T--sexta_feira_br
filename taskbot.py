@@ -11,6 +11,7 @@ import sqlalchemy
 import db
 from db import Task
 import datetime
+from contracts import contract
 
 # take out the token to other file
 FILENAME = "TOKEN.txt"
@@ -18,19 +19,30 @@ FILENAME = "TOKEN.txt"
 # user name and password
 USERLOGIN = "user.txt"
 
+
+@contract
 def read_file_token(FILENAME):
+    """ Function description.
+        :type FILENAME: string
+    """
     print("Loading Token")
     inFile = open(FILENAME, 'r')
     TOKEN = inFile.readline().rstrip()
     return TOKEN
 
+
+@contract
 def read_user_login(USERLOGIN):
+    """ Function description.
+        :type USERLOGIN: string
+    """
     print("Loading User")
     inFile = open(USERLOGIN, 'r')
     user_name = inFile.readline().rstrip()
     user_password = inFile.readline().rstrip()
 
     return user_name, user_password
+
 
 TOKEN = read_file_token(FILENAME)
 user_name, user_password = read_user_login(USERLOGIN)
@@ -60,24 +72,40 @@ HELP = """
 
 
 class API(object):
+    @contract
     def get_url(self, url):
+        """ Function description.
+            :type url: string
+        """
+
         response = requests.get(url)
         content = response.content.decode("utf8")
         return content
 
+    @contract
     def get_json_from_url(self, url):
+        """ Function description.
+            :type url: string
+        """
         content = self.get_url(url)
         js = json.loads(content)
         return js
 
+    
     def get_updates(self, offset=None):
+ 
         url = URL + "getUpdates?timeout=100"
         if offset:
             url += "&offset={}".format(offset)
         js = self.get_json_from_url(url)
         return js
 
+    @contract
     def send_message(self, text, chat_id, reply_markup=None):
+        """ Function description.
+            :type text: string
+            :type chat_id: int
+        """
         text = urllib.parse.quote_plus(text)
         url = URL + \
             "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(
@@ -86,7 +114,11 @@ class API(object):
             url += "&reply_markup={}".format(reply_markup)
         self.get_url(url)
 
+    @contract
     def get_last_update_id(self, updates):
+        """ Function description.
+            :type updates: dict
+        """
         update_ids = []
         for update in updates["result"]:
             update_ids.append(int(update["update_id"]))
@@ -94,7 +126,11 @@ class API(object):
         return max(update_ids)
 
 
+@contract
 def deps_text(task, chat, preceed=''):
+    """ Function description.
+        :type chat: int
+    """
     text = ''
 
     for i in range(len(task.dependencies.split(',')[:-1])):
@@ -126,9 +162,14 @@ def deps_text(task, chat, preceed=''):
 class Tags(object):
     apiBot = API()
 
+    @contract
     def new(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int
+        """
         task = Task(chat=chat, name=message, status='TODO',
-                    dependencies='', parents='', priority='low', duedate= datetime.date(2100, 12, 12))
+                    dependencies='', parents='', priority='low', duedate=datetime.date(2100, 12, 12))
         issue = repository.create_issue(message)
         task.issue_number = issue.number
         db.session.add(task)
@@ -136,19 +177,32 @@ class Tags(object):
         apiBot.send_message(
             "New task *TODO* [[{}]] {}".format(task.id, task.name), chat)
 
+    @contract
     def find_task(self, task_id, chat):
+        """ Function description.
+            :type chat: int
+        """
         query = db.session.query(Task).filter_by(id=task_id, chat=chat)
         task = query.one()
 
         return task
 
+    @contract
     def id_error_message(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int
+        """
         if message.isdigit():
             apiBot.send_message("Task {} not found".format(message), chat)
         else:
             apiBot.send_message("You must inform the task id", chat)
 
+    @contract
     def separate_message(self, message):
+        """ Function description.
+            :type message: string
+        """
         terms_list = ''
 
         if len(message.split(' ', 1)) > 1:
@@ -157,7 +211,12 @@ class Tags(object):
 
         return priority_id, terms_list
 
+    @contract
     def rename(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int
+        """
         new_name = ''
         message_is_not_blank = message != ''
         if message_is_not_blank:
@@ -187,7 +246,12 @@ class Tags(object):
         else:
             self.id_error_message(priority_id, chat, apiBot)
 
+    @contract
     def duplicate(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int
+        """
         if message.isdigit():
             task_id = int(message)
             try:
@@ -209,6 +273,8 @@ class Tags(object):
                 dependent_task = self.find_task(dependent_task_id, chat)
                 dependent_task.parents += '{},'.format(duplicated_task.id)
 
+            issue = repository.create_issue(duplicated_task.name)
+            duplicated_task.issue_number = issue.number
             db.session.commit()
             apiBot.send_message(
                 "New task *TODO* [[{}]] {}".format(duplicated_task.id,
@@ -217,7 +283,12 @@ class Tags(object):
         else:
             self.id_error_message(message, chat, apiBot)
 
+    @contract
     def delete(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int        
+        """
         if message.isdigit():
             task_id = int(message)
             try:
@@ -237,7 +308,13 @@ class Tags(object):
         else:
             self.id_error_message(message, chat, apiBot)
 
+    @contract
     def change_status(self, message, chat, apiBot, command):
+        """ Function description.
+            :type message: string
+            :type chat: int        
+            :type command: string
+        """
         for task_id in message.split(' '):
             if task_id.isdigit():
                 task_id = int(task_id)
@@ -266,7 +343,11 @@ class Tags(object):
             else:
                 self.id_error_message(message, chat, apiBot)
 
+    @contract
     def list_tasks(self, chat, apiBot):
+        """ Function description.
+            :type chat: int   
+        """
         task_list = ''
         task_list += '\U0001F4CB Task List\n'
         query = db.session.query(Task).filter_by(
@@ -279,7 +360,7 @@ class Tags(object):
                 icon = '\U00002611'
 
             task_list += '[[{}]] {} {} [[{}]]-----{}\n'.format(
-                task.id,icon, task.name,task.priority,task.duedate.strftime("%d/%m/%Y"))
+                task.id, icon, task.name, task.priority, task.duedate.strftime("%d/%m/%Y"))
             task_list += deps_text(task, chat)
 
         apiBot.send_message(task_list, chat)
@@ -307,7 +388,13 @@ class Tags(object):
 
         apiBot.send_message(task_list, chat)
 
+    @contract
     def check_dependency(self, task_id, string_id, chat, apiBot):
+        """ Function description.
+            :type task_id: int
+            :type string_id: string
+            :type chat: int
+        """
         dependency_is_possible = True
         task_father = self.find_task(task_id, chat)
         if task_father.parents != '':
@@ -326,7 +413,13 @@ class Tags(object):
                         break
         return dependency_is_possible
 
+    @contract
     def dependson(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int 
+        """
+
         son_id = ''
         message_is_not_blank = message != ''
         if message_is_not_blank:
@@ -385,7 +478,12 @@ class Tags(object):
         else:
             self.id_error_message(father_id, chat, apiBot)
 
+    @contract
     def priority(self, message, chat, apiBot):
+        """ Function description.
+            :type message: string
+            :type chat: int 
+        """
         text = ''
         if message != '':
             task_id, priority = self.separate_message(message)
@@ -417,8 +515,12 @@ class Tags(object):
         else:
             apiBot.send_message("You must inform the task id", chat)
 
+    @contract
     def set_date(self, message, chat, apiBot):
-
+        """ Function description.
+            :type message: string
+            :type chat: int        
+        """
         day = 0
         month = 0
         year = 0
@@ -433,7 +535,7 @@ class Tags(object):
 
         if day > 31:
             apiBot.send_message("Sorry,this day doesn't exist,please", chat)
-        elif month >12 :
+        elif month > 12:
             apiBot.send_message("Sorry,this month doesn't exist", chat)
         elif message.isdigit():
             task_id = int(message)
@@ -453,7 +555,13 @@ class Tags(object):
         else:
             apiBot.send_message("You must inform the task id", chat)
 
+
+@contract
 def handle_updates(updates):
+    """ Function description.
+        :type updates: dict
+    """
+
     tags = Tags()
     apiBot = API()
     for update in updates["result"]:
