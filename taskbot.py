@@ -391,7 +391,7 @@ class Tags(object):
     @contract
     def check_dependency(self, task_id, string_id, chat, apiBot):
         """ Function description.
-            :type task_id: int
+            :type task_id: int,>0
             :type string_id: string
             :type chat: int
         """
@@ -525,18 +525,22 @@ class Tags(object):
         month = 0
         year = 0
 
-        if message != '':
+        if message != '' and len(message.split(' ')) > 1:
             message, duedate = self.separate_message(message)
             if len(duedate.split('/', 2)) > 1:
                 month = int(duedate.split('/', 2)[1])
                 year = int(duedate.split('/', 2)[2])
 
             day = int(duedate.split('/', 2)[0])
+        else:
+            apiBot.send_message("Sorry,this message ins't valid.", chat)
 
-        if day > 31:
-            apiBot.send_message("Sorry,this day doesn't exist,please", chat)
-        elif month > 12:
+        if day > 31 or day < 0:
+            apiBot.send_message("Sorry,this day doesn't exist", chat)
+        elif month > 12 or month < 0:
             apiBot.send_message("Sorry,this month doesn't exist", chat)
+        elif year < 0:
+            apiBot.send_message("Sorry,this year doesn't exist", chat)
         elif message.isdigit():
             task_id = int(message)
             query = db.session.query(Task).filter_by(id=task_id, chat=chat)
